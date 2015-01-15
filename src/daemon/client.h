@@ -131,7 +131,7 @@ void client_notify_command(srs_client_t *c, int idx, int ntoken,
                            srs_audiobuf_t *audio);
 
 /** Request synthesizing a message. */
-uint32_t client_render_voice(srs_client_t *c, const char *msg,
+uint32_t client_render_voice(srs_client_t *c, const char *role, const char *msg,
                              const char *voice, double rate, double pitch,
                              int timeout, int notify_events);
 

@@ -382,14 +382,14 @@ static void client_voice_event(srs_voice_event_t *event, void *notify_data)
 }
 
 
-uint32_t client_render_voice(srs_client_t *c, const char *msg,
+uint32_t client_render_voice(srs_client_t *c, const char *role, const char *msg,
                              const char *voice, double rate, double pitch,
                              int timeout, int notify_events)
 {
     srs_context_t *srs      = c->srs;
-    const char    *tags[32] = { "media.role=speech", NULL };
+    const char    *tags[32] = { NULL };
     int            forced   = SRS_VOICE_MASK_DONE;
-    char           setname[128];
+    char           setname[128], roletag[128];
     int            id;
     voice_req_t   *req;
 
@@ -404,6 +404,9 @@ uint32_t client_render_voice(srs_client_t *c, const char *msg,
         rate = 1;
     if (pitch == 0)
         pitch = 1;
+
+    snprintf(roletag, sizeof(roletag), "media.role=%s", role ? role : "speech");
+    tags[0] = roletag;
 
     if ((id = srs_resctl_get_nameid(c->rset)) != 0) {
         snprintf(setname, sizeof(setname),
