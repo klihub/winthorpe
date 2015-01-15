@@ -158,6 +158,7 @@ int srs_resctl_connect(srs_context_t *srs, srs_resctl_event_cb_t cb,
     ctx->srs       = srs;
     ctx->cb        = cb;
     ctx->user_data = user_data;
+    ctx->nameid    = 1;
     srs->rctx      = ctx;
 
     if (try_connect(ctx) || (reconnect && start_connect(ctx)))
@@ -345,7 +346,8 @@ static int create_set(srs_resset_t *set)
         if (attr == NULL)
             goto fail;
 
-        snprintf(name, sizeof(name), "speech-client#%u", set->nameid);
+        snprintf(name, sizeof(name),
+                 "%s%u", SRS_RESCTL_NAME_PREFIX, set->nameid);
 
         if (mrp_res_set_attribute_string(attr, name) != 0)
             goto fail;
@@ -363,7 +365,8 @@ static int create_set(srs_resset_t *set)
             goto fail;
 
         if (!name[0])
-            snprintf(name, sizeof(name), "speech-client#%u", set->nameid);
+            snprintf(name, sizeof(name), "%s%u",
+                     SRS_RESCTL_NAME_PREFIX, set->nameid);
 
         if (mrp_res_set_attribute_string(attr, name) != 0)
             goto fail;
@@ -401,10 +404,19 @@ void srs_resctl_offline(srs_resset_t *set)
 }
 
 
-int srs_resctl_getid(srs_resset_t *set)
+int srs_resctl_get_setid(srs_resset_t *set)
 {
     if (set->set != NULL)
         return mrp_res_get_resource_set_id(set->set);
+    else
+        return 0;
+}
+
+
+int srs_resctl_get_nameid(srs_resset_t *set)
+{
+    if (set->set != NULL)
+        return set->nameid;
     else
         return 0;
 }

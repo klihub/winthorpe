@@ -37,6 +37,8 @@ typedef struct srs_resset_s srs_resset_t;
 
 #include "srs/daemon/context.h"
 
+#define SRS_RESCTL_NAME_PREFIX "speech-client#"
+
 typedef enum {
     SRS_RESCTL_EVENT_UNKNOWN = 0,
     SRS_RESCTL_EVENT_CONNECTION,         /* connection up/down event */
@@ -77,7 +79,8 @@ void srs_resctl_destroy(srs_resset_t *set);
 int srs_resctl_online(srs_resset_t *set);
 void srs_resctl_offline(srs_resset_t *set);
 
-int srs_resctl_getid(srs_resset_t *set);
+int srs_resctl_get_setid(srs_resset_t *set);
+int srs_resctl_get_nameid(srs_resset_t *set);
 
 int srs_resctl_acquire(srs_resset_t *set, int shared);
 int srs_resctl_release(srs_resset_t *set);
