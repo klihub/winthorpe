@@ -208,6 +208,7 @@ typedef struct {
     double    pitch;                     /* pitch to use for synthesis */
     uint32_t  events;                    /* events to deliver to client */
     int       timeout;                   /* rendering timeout */
+    char     *role;                      /* audio role to use for rendering */
 } w3c_utt_attr_t;
 
 
@@ -257,6 +258,7 @@ typedef enum {
     W3C_ATTR_PITCH      = (0x1 << 13),
     W3C_ATTR_SHARED     = (0x1 << 14),
     W3C_ATTR_TIMEOUT    = (0x1 << 15),
+    W3C_ATTR_ROLE       = (0x1 << 16),
 } w3c_attrmask_t;
 
 
@@ -1007,7 +1009,7 @@ static w3c_utterance_t *lookup_utterance(w3c_client_t *c, int id, uint32_t vid)
 
 static int activate_utterance(w3c_utterance_t *utt)
 {
-    const char *msg, *voice;
+    const char *msg, *voice, *role;
     double      rate, pitch;
     int         timeout, events;
 
@@ -1019,12 +1021,13 @@ static int activate_utterance(w3c_utterance_t *utt)
     rate    = utt->attr.rate;
     pitch   = utt->attr.pitch;
     timeout = utt->attr.timeout;
+    role    = utt->attr.role;
 
     events  = SRS_VOICE_MASK_ALL;
 
     if (!utt->syn->paused) {
-        utt->vid = client_render_voice(utt->syn->srsc, msg, voice, rate, pitch,
-                                       timeout, events);
+        utt->vid = client_render_voice(utt->syn->srsc, role,
+                                       msg, voice, rate, pitch, timeout, events);
 
         if (utt->vid == SRS_VOICE_INVALID) {
             errno = EINVAL;
@@ -1459,6 +1462,7 @@ static int check_utterance_attr(void *obj, w3c_attrdef_t *def, void *val,
     case W3C_ATTR_RATE:
     case W3C_ATTR_PITCH:
     case W3C_ATTR_TIMEOUT:
+    case W3C_ATTR_ROLE:
         if (utt->vid == SRS_VOICE_INVALID)
             return 0;
 
@@ -1545,6 +1549,7 @@ static inline w3c_attrdef_t *utterance_attributes(void)
         DOUBLE ("pitch"          , pitch     , PITCH     , DEFAULT       ),
         INTEGER("timeout"        , timeout   , TIMEOUT   , DEFAULT       ),
         ARRAY  ("events"         , events    , EVENTS    , parse_events  ),
+        STRING ("role"           , role      , ROLE      , DEFAULT       ),
         { NULL, 0, 0, 0, NULL, NULL }
     };
 
