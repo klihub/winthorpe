@@ -68,7 +68,7 @@ void client_create_resources(srs_context_t *srs)
         if (c->rset == NULL)
             c->rset = srs_resctl_create(srs, c->appclass, resource_event, c);
         else
-            srs_resctl_online(srs, c->rset);
+            srs_resctl_online(c->rset);
 
         if (c->rset != NULL) {
             f = c->requested;

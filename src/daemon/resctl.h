@@ -74,7 +74,7 @@ srs_resset_t *srs_resctl_create(srs_context_t *srs, char *appclass,
                                 srs_resctl_event_cb_t cb, void *user_data);
 void srs_resctl_destroy(srs_resset_t *set);
 
-int srs_resctl_online(srs_context_t *srs, srs_resset_t *set);
+int srs_resctl_online(srs_resset_t *set);
 void srs_resctl_offline(srs_resset_t *set);
 
 int srs_resctl_getid(srs_resset_t *set);

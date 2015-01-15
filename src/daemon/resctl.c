@@ -39,6 +39,7 @@ struct srs_resctx_s {
     srs_resctl_event_cb_t  cb;           /* notification callback */
     void                  *user_data;    /* opaque notification data */
     mrp_timer_t           *t;            /* (re)connect timer */
+    uint32_t               nameid;       /* next set 'id' */
 };
 
 
@@ -51,6 +52,7 @@ struct srs_resset_s {
     char                   *appclass;    /* application class */
     int                     shared : 1;  /* whether currently shared */
     mrp_deferred_t         *emul;        /* deferred cb for emulation */
+    uint32_t                nameid;      /* id for set name */
 };
 
 
@@ -69,18 +71,32 @@ static int emul_release(srs_resset_t *set);
 #define DEFAULT_SREC "speech_recognition"
 #define CONFIG_SSYN  "resource.synthesis"
 #define DEFAULT_SSYN "speech_synthesis"
+#define CONFIG_APLY "resource.playback"
+#define DEFAULT_APLY "audio_playback"
+#define CONFIG_AREC "resource.record"
+#define DEFAULT_AREC "audio_recording"
 
 static const char *name_srec;
 static const char *name_ssyn;
-
+static const char *name_aply;
+static const char *name_arec;
 
 static void get_resource_names(srs_cfg_t *cfg)
 {
     name_srec = srs_config_get_string(cfg, CONFIG_SREC, DEFAULT_SREC);
     name_ssyn = srs_config_get_string(cfg, CONFIG_SSYN, DEFAULT_SSYN);
+    name_aply = srs_config_get_string(cfg, CONFIG_APLY, DEFAULT_APLY);
+    name_arec = srs_config_get_string(cfg, CONFIG_AREC, DEFAULT_AREC);
+
+    if (!strcmp(name_aply, name_ssyn))
+        name_aply = name_ssyn;
+    if (!strcmp(name_arec, name_srec))
+        name_arec = name_srec;
 
     mrp_log_info("Using resource '%s' for speech recognition.", name_srec);
-    mrp_log_info("Using resoruce '%s' for speech synthesis.", name_ssyn);
+    mrp_log_info("Using resource '%s' for speech synthesis.", name_ssyn);
+    mrp_log_info("Using resource '%s' for audio playback.", name_aply);
+    mrp_log_info("Using resource '%s' for audio recording.", name_arec);
 }
 
 
@@ -248,7 +264,7 @@ srs_resset_t *srs_resctl_create(srs_context_t *srs, char *appclass,
     set->shared    = shared = TRUE;
     set->appclass  = mrp_strdup(appclass);
 
-    if (ctx == NULL || ctx->ctx == NULL || srs_resctl_online(srs, set)) {
+    if (ctx == NULL || ctx->ctx == NULL || srs_resctl_online(set)) {
         mrp_list_append(&ctx->sets, &set->hook);
         return set;
     }
@@ -285,10 +301,84 @@ void srs_resctl_destroy(srs_resset_t *set)
 }
 
 
-int srs_resctl_online(srs_context_t *srs, srs_resset_t *set)
+static void reset_set(srs_resset_t *set)
 {
-    srs_resctx_t *ctx = srs->rctx;
+    if (set && set->set) {
+        mrp_res_delete_resource_set(set->set);
+        set->set = NULL;
+    }
+}
 
+
+static int create_set(srs_resset_t *set)
+{
+    srs_resctx_t  *ctx = set ? set->ctx : NULL;
+    srs_context_t *srs = ctx ? ctx->srs : NULL;
+    mrp_res_resource_t *play, *rec;
+    mrp_res_attribute_t *attr;
+    char name[128];
+
+    if (name_srec == NULL || name_ssyn == NULL)
+        get_resource_names(srs->settings);
+
+    set->set = mrp_res_create_resource_set(ctx->ctx, set->appclass,
+                                           set_event, set);
+    set->nameid = ctx->nameid++;
+
+    if (set->set == NULL)
+        goto fail;
+
+    if (!mrp_res_create_resource(set->set, name_srec, TRUE, set->shared) ||
+        !mrp_res_create_resource(set->set, name_ssyn, TRUE, set->shared))
+        goto fail;
+
+    name[0] = '\0';
+
+    if (name_aply != name_ssyn) {
+        play = mrp_res_create_resource(set->set, name_aply, TRUE, set->shared);
+
+        if (play == NULL)
+            goto fail;
+
+        attr = mrp_res_get_attribute_by_name(play, "name");
+
+        if (attr == NULL)
+            goto fail;
+
+        snprintf(name, sizeof(name), "speech-client#%u", set->nameid);
+
+        if (mrp_res_set_attribute_string(attr, name) != 0)
+            goto fail;
+    }
+
+    if (name_arec != name_srec) {
+        rec = mrp_res_create_resource(set->set, name_arec, TRUE, set->shared);
+
+        if (rec == NULL)
+            goto fail;
+
+        attr = mrp_res_get_attribute_by_name(rec, "name");
+
+        if (attr == NULL)
+            goto fail;
+
+        if (!name[0])
+            snprintf(name, sizeof(name), "speech-client#%u", set->nameid);
+
+        if (mrp_res_set_attribute_string(attr, name) != 0)
+            goto fail;
+    }
+
+    return TRUE;
+
+ fail:
+    reset_set(set);
+    return FALSE;
+}
+
+
+int srs_resctl_online(srs_resset_t *set)
+{
     if (set == NULL)
         return FALSE;
 
@@ -297,24 +387,10 @@ int srs_resctl_online(srs_context_t *srs, srs_resset_t *set)
         set->emul = NULL;
     }
 
-    set->ctx = ctx;
-    set->set = mrp_res_create_resource_set(ctx->ctx, set->appclass,
-                                           set_event, set);
-
-    if (set->set == NULL)
+    if (!create_set(set))
         return FALSE;
 
-    if (name_srec == NULL || name_ssyn == NULL)
-        get_resource_names(srs->settings);
-
-    if (mrp_res_create_resource(set->set, name_srec, TRUE, set->shared) &&
-        mrp_res_create_resource(set->set, name_ssyn, TRUE, set->shared))
-        return TRUE;
-
-    mrp_res_delete_resource_set(set->set);
-    set->set = NULL;
-
-    return FALSE;
+    return TRUE;
 }
 
 
@@ -345,36 +421,19 @@ int srs_resctl_acquire(srs_resset_t *set, int shared)
         return emul_acquire(set, shared);
 
     if (!!shared != !!set->shared) {
-        mrp_res_delete_resource_set(set->set);
+        reset_set(set);
         set->shared = !!shared;
-        set->set    = NULL;
 
-        set->set = mrp_res_create_resource_set(ctx->ctx, set->appclass,
-                                               set_event, set);
-
-        if (set->set == NULL)
-            goto fail;
-
-        if (!mrp_res_create_resource(set->set, name_srec,
-                                     TRUE, shared) ||
-            !mrp_res_create_resource(set->set, name_ssyn,
-                                     TRUE, shared))
-            goto fail;
+        if (!create_set(set))
+            return FALSE;
     }
 
     if (mrp_res_acquire_resource_set(set->set) == 0)
         return TRUE;
     else {
-        /* fall through */
+        reset_set(set);
+        return FALSE;
     }
-
- fail:
-    if (set->set != NULL) {
-        mrp_res_delete_resource_set(set->set);
-        set->set = NULL;
-    }
-
-    return FALSE;
 }
 
 
