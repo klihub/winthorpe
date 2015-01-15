@@ -686,7 +686,8 @@ static int render_voice_req(mrp_dbus_t *dbus, mrp_dbus_msg_t *req,
         return TRUE;
     }
 
-    reqid = client_render_voice(c, msg, voice, rate, pitch, timeout, events);
+    reqid = client_render_voice(c, NULL,
+                                msg, voice, rate, pitch, timeout, events);
 
     if (reqid != SRS_VOICE_INVALID)
         reply_render(dbus, req, reqid);

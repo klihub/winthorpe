@@ -196,7 +196,8 @@ static void request_voice(client_t *c, srs_req_voice_t *req)
 
     mrp_debug("received voice render request from native client #%d", c->id);
 
-    reqid = client_render_voice(c->c, msg, voice, rate, pitch, timeout, events);
+    reqid = client_render_voice(c->c, NULL,
+                                msg, voice, rate, pitch, timeout, events);
 
     if (reqid != SRS_VOICE_INVALID)
         reply_render(c, req->reqno, reqid);
