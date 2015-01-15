@@ -325,6 +325,15 @@ void srs_resctl_offline(srs_resset_t *set)
 }
 
 
+int srs_resctl_getid(srs_resset_t *set)
+{
+    if (set->set != NULL)
+        return mrp_res_get_resource_set_id(set->set);
+    else
+        return 0;
+}
+
+
 int srs_resctl_acquire(srs_resset_t *set, int shared)
 {
     srs_resctx_t *ctx = set ? set->ctx : NULL;
