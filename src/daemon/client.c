@@ -386,9 +386,11 @@ uint32_t client_render_voice(srs_client_t *c, const char *msg,
                              const char *voice, double rate, double pitch,
                              int timeout, int notify_events)
 {
-    srs_context_t *srs    = c->srs;
-    const char    *tags[] = { "media.role=speech", NULL };
-    int            forced = SRS_VOICE_MASK_DONE;
+    srs_context_t *srs      = c->srs;
+    const char    *tags[32] = { "media.role=speech", NULL };
+    int            forced   = SRS_VOICE_MASK_DONE;
+    char           setid[128];
+    int            rsid;
     voice_req_t   *req;
 
     if ((req = mrp_allocz(sizeof(*req))) == NULL)
@@ -402,6 +404,12 @@ uint32_t client_render_voice(srs_client_t *c, const char *msg,
         rate = 1;
     if (pitch == 0)
         pitch = 1;
+
+    if ((rsid = srs_resctl_getid(c->rset)) != 0) {
+        snprintf(setid, sizeof(setid), "resource.set.id=%u", rsid);
+        tags[1] = setid;
+        tags[2] = NULL;
+    }
 
     req->id = srs_render_voice(srs, msg, (char **)tags, voice, rate, pitch,
                                timeout, notify_events | forced,
