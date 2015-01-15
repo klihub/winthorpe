@@ -380,7 +380,7 @@ Although the server allows all standard attributes to be set, currently
 volume is always ignored and depending on the backend, rate and pitch
 might be ignore.
 
-In addition to the standard attributes, Winthirpe allows the following
+In addition to the standard attributes, Winthorpe allows the following
 non-standard ones to be set:
 
   - events: the set of events the client wants to be notified about. This
@@ -392,6 +392,11 @@ non-standard ones to be set:
   - timeout: timeout after which the utterance gets automatically cancelled
     if its rendering has not been started. The timeout period is specified
     in milliseconds.
+
+  - role: audio 'role' to use instead of the default 'speech' in rendering.
+    The audio role typically might affect what volume rules are applied to
+    the stream and also what effects (volume ramping, muting) the stream
+    will cause to other concurrent audio streams.
 
 Upon sucessful creation the server responds with a success status reply
 containing the object ID of the newly created utterance.
